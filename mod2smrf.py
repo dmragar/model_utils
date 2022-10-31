@@ -145,7 +145,7 @@ def s2m(smrf_albedo, mod_albedo, wavelength):
     mod_a['band_data'] /= 100
     
     #WY2020 has MODIS processing errors causing very low albedo values. 
-    mod_a = mod_a.where(mod_a['band_data'] > 0.3, np.nan)
+    mod_a = mod_a.where(mod_a['band_data'] > 0.4, np.nan)
     
     #offset to match SASP station data
     #derived from bias correction of 20 year SASP-MODIS comparison
@@ -251,6 +251,7 @@ def process_modis_smrf(smrf_albedo, mod_albedo, basin_dir, wy, wavelength):
                 #run s2m 
                 res = s2m(smrf_albedo, f, wavelength)
                 
+                # hour 15 is chosen
                 res[wavelength][15].plot()
                 plt.show()
                 

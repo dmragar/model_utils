@@ -15,8 +15,10 @@ import datetime
 import datetime as dt
 import dask
 from datetime import timedelta
+import os
 
 wsdlurl = 'https://hydroportal.cuahsi.org/Snotel/cuahsi_1_1.asmx?WSDL'
+BASE_PATH = "/uufs/chpc.utah.edu/common/home/u1321700/skiles_storage/AD_isnobal/"
 
 
 def snotel_fetch(sitecode, start_date, end_date, variablecode='SNOTEL:SNWD_D'):
@@ -290,5 +292,21 @@ def precise_coords_for_snotel(ad_snotel_sites):
     
     return gdf
 
+
+def make_smrf_folders(wy, path):
+    """
+    create SMRF directory structure for given water year. 
+    :param: wy: water-year
+    :param: path: added to BASE_PATH, e.x. "animas_calibrated/wy2021/crb/"
+    """
+    start = f"{wy-1}-10-01" 
+    end = f"{wy}-9-30"
+    date_range = pd.date_range(start, end, freq='d')
+    #print(date_range)
+    for day in date_range:
+        fmt_day = day.strftime("%Y%m%d")
+        #print(fmt_day)
+        dirpath = os.path.join(BASE_PATH, path, f"run{fmt_day}")
+        os.mkdir(dirpath)
 
 
