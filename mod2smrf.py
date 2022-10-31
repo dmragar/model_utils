@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from osgeo import gdal
+from rasterio.enums import Resampling
 #import gdal
 import geopandas as gpd
 from pyproj import Proj
@@ -105,7 +106,7 @@ def s2m(smrf_albedo, mod_albedo, wavelength):
     
     :param mod_albedo: dir of .nc of remote albedo observations
     :param smrf_albedo: dir of .nc files output by SMRF
-    :param weight: multiplier to create separate vis and ir files
+    :param wavelength: which band to process, "albedo_vis" or "albedo_ir"
     :return: smrf .nc files are written back to dir in same format with albedo replaced
     """
     valid = {'albedo_vis', 'albedo_ir'}
@@ -128,7 +129,7 @@ def s2m(smrf_albedo, mod_albedo, wavelength):
     mod_a = xr.open_dataset(mod_albedo)
       
     # reproject to smrf
-    mod_a = mod_a.rio.reproject_match(smrf_a)
+    mod_a = mod_a.rio.reproject_match(smrf_a, resampling=Resampling.cubic)
     #avoid float precision errors by reassining coords         
     mod_a = mod_a.assign_coords({
         "x": smrf_a.x,
@@ -170,7 +171,7 @@ def s2m(smrf_albedo, mod_albedo, wavelength):
     
     
     mod_a['band_data'] = mod_a['band_data'].rio.write_nodata(np.nan)  
-    mod_a = mod_a.rio.interpolate_na()
+    mod_a = mod_a.rio.interpolate_na(method="cubic")
     
     
     # create time range for each day
