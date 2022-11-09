@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
+from datetime import datetime
 
 from osgeo import gdal
 from rasterio.enums import Resampling
@@ -26,8 +27,20 @@ import plotly.express as px
 
 
 def get_timestamp(f):
-    nums = re.findall('\d+', f)
-    return nums[0]
+    """
+    get date from filename
+    will only parse date if contained within underscore
+    e.x. _20221031_
+    :param f: path string
+    :return: tuple of datetime date and string date
+    """
+    split_str = f.split("_")
+    idx = [char.isdigit() for char in split_str]
+    str_fmt = split_str[idx.index(True)]
+    dt_fmt = pd.to_datetime(str_fmt)
+    
+    #nums = re.findall('\d+', f)
+    return dt_fmt, str_fmt
 
 # deprecated
 def lm(A, B, illum, gs_image):
@@ -105,7 +118,7 @@ def s2m(smrf_albedo, mod_albedo, wavelength):
     loads existing albedo .nc file from AWSM run, and replaces albedo with satellite obsevations for the same time  period. 
     
     :param mod_albedo: dir of .nc of remote albedo observations
-    :param smrf_albedo: dir of .nc files output by SMRF
+    :param smrf_albedo: location of template SMRF file to use for rio.reproject_match 
     :param wavelength: which band to process, "albedo_vis" or "albedo_ir"
     :return: smrf .nc files are written back to dir in same format with albedo replaced
     """
@@ -121,9 +134,8 @@ def s2m(smrf_albedo, mod_albedo, wavelength):
     smrf_a.rio.set_crs('EPSG:32613', inplace=True)
     #strip albedo_vis 
     
-        
     # extract datetime from path
-    ts = get_timestamp(mod_albedo)
+    _, ts = get_timestamp(mod_albedo)
 
     # open modis
     mod_a = xr.open_dataset(mod_albedo)
@@ -139,26 +151,23 @@ def s2m(smrf_albedo, mod_albedo, wavelength):
     #WARN: must do NA handling before using "other" in .where, which will fill all nans
     mod_a = mod_a.where(mod_a['band_data'] != 0, np.nan)
     mod_a = mod_a.where(mod_a['band_data'] != 65535, np.nan)
-    
         
     #scale MODIS to between 0 and 1
     mod_a['band_data'] /= 100
     mod_a['band_data'] /= 100
     
     #WY2020 has MODIS processing errors causing very low albedo values. 
-    mod_a = mod_a.where(mod_a['band_data'] > 0.4, np.nan)
+    mod_a = mod_a.where(mod_a['band_data'] > 0.3, np.nan)
     
     #offset to match SASP station data
     #derived from bias correction of 20 year SASP-MODIS comparison
     mod_a['band_data'] -= 0.1294
-    
     
     if wavelength == 'albedo_vis':
         # returns vis alb
         mod_a['band_data'] = broad2spectral(mod_a['band_data'])[0]
         print('visible case')
  
-    
     elif wavelength == 'albedo_ir':
         # returns ir alb
         mod_a['band_data'] = broad2spectral(mod_a['band_data'])[1]
@@ -168,16 +177,19 @@ def s2m(smrf_albedo, mod_albedo, wavelength):
     mod_a = mod_a.drop_vars('band')
     mod_a = mod_a.squeeze('band')
 
-    
-    
     mod_a['band_data'] = mod_a['band_data'].rio.write_nodata(np.nan)  
-    mod_a = mod_a.rio.interpolate_na(method="cubic")
     
+    #mod_a = mod_a.rio.interpolate_na(method="linear")
+    #mod_a = mod_a.rio.interpolate_na(method="nearest")
+    mod_a['band_data'] = mod_a['band_data'].fillna(0.35)
+    
+    #mod_a['band_data'] = mod_a['band_data'].interp(method="linear")
+    # run "nearest" after "cubic" to clean up any edge effects
+    #mod_a = mod_a.rio.interpolate_na(method="nearest")
     
     # create time range for each day
-    time = pd.date_range(str(ts + ' 00:00'), str(ts + ' 23:00'), freq='1h')
-    
-    
+    time = pd.date_range(str(ts + ' 00:00'), 
+                         str(ts + ' 23:00'), freq='1h')
     #create 24 hr time range to match SMRF
     hours = []
 
@@ -187,46 +199,30 @@ def s2m(smrf_albedo, mod_albedo, wavelength):
     mod_a = xr.concat(hours, dim='time')
     mod_a['time'] = time
     
-    
-    
     mod_a = mod_a.drop_vars('spatial_ref')   
     #mod_a = mod_a.transpose("time", "y", "x")
     
     # rename to appropriate name
     mod_a = mod_a.rename({
         "band_data": wavelength
-    })
-        
+        }
+    )
     
     # assign SMRF projection
     mod_a['projection'] = smrf_a['projection']
     
-    
-
-    '''
-    #add finalized mod arr to smrf template and save back for each day
-    smrf_a['albedo_vis_new'] = mod_a['band_data']
-    #smrf_a = xr.concat([smrf_a, mod_a['band_data']], dim='time')
-    
-    # assign time from MODIS file to SMRF template file
-    smrf_a = smrf_a.assign_coords({
-         "time": mod_a.time
-    })
-       
-    #remove smrf albedo and replace with modis albedo
-    smrf_a = smrf_a.drop_vars('albedo_vis')
-    #rename modis albedo
-    smrf_a = smrf_a.rename({
-       "albedo_vis_new": "albedo_vis"
-    })
-    ''' 
     return(mod_a)
+
 
 
 
 def process_modis_smrf(smrf_albedo, mod_albedo, basin_dir, wy, wavelength):
     """
     for applying the s2m function to an awsm ouput dir
+
+    :param mod_albedo: dir of .nc of remote albedo observations
+    :param smrf_albedo: location of template SMRF file to use for rio.reproject_match 
+    :param wavelength: which band to process, "albedo_vis" or "albedo_ir"
     """
     # sort inplace
     mod_albedo.sort()
@@ -239,10 +235,12 @@ def process_modis_smrf(smrf_albedo, mod_albedo, basin_dir, wy, wavelength):
     
     for f in mod_albedo:
         # get date from filename
-        split_str = f.split("_")
-        dt = pd.to_datetime(split_str[8])
+        # will only parse date if contained within underscore
+        # e.x. _20221031_
+        dt, _ = get_timestamp(f)
         
         print(dt)
+        
         # run for single water water year only
         if (dt >= datetime(wy, 4, 1)) & (dt <= datetime(wy, 9, 30)):
     
@@ -252,11 +250,11 @@ def process_modis_smrf(smrf_albedo, mod_albedo, basin_dir, wy, wavelength):
                 #run s2m 
                 res = s2m(smrf_albedo, f, wavelength)
                 
-                # hour 15 is chosen
-                res[wavelength][15].plot()
-                plt.show()
+                # hour 15 is chosen for plot
+                #res[wavelength][15].plot()
+                #plt.show()
                 
-                ts = get_timestamp(f)
+                _, ts = get_timestamp(f)
                 
                 outp = os.path.join(basin_dir, str('run' + ts), str(wavelength + '_modis.nc'))
             
@@ -275,3 +273,4 @@ def process_modis_smrf(smrf_albedo, mod_albedo, basin_dir, wy, wavelength):
                 except: 
                     raise PermissionError(f'WARN: file not saved. check if smrf directory exists for day: {ts}')
                 
+
