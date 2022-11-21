@@ -15,7 +15,7 @@ import datetime
 import datetime as dt
 import dask
 from datetime import timedelta
-import os
+
 
 wsdlurl = 'https://hydroportal.cuahsi.org/Snotel/cuahsi_1_1.asmx?WSDL'
 BASE_PATH = "/uufs/chpc.utah.edu/common/home/u1321700/skiles_storage/AD_isnobal/"
@@ -302,11 +302,9 @@ def make_smrf_folders(wy, path):
     start = f"{wy-1}-10-01" 
     end = f"{wy}-9-30"
     date_range = pd.date_range(start, end, freq='d')
-    #print(date_range)
+
     for day in date_range:
         fmt_day = day.strftime("%Y%m%d")
-        #print(fmt_day)
+        print(fmt_day)
         dirpath = os.path.join(BASE_PATH, path, f"run{fmt_day}")
-        os.mkdir(dirpath)
-
-
+        os.makedirs(dirpath, exist_ok=True)
