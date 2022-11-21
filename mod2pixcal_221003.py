@@ -64,7 +64,7 @@ def decay_params(bb, time_dim, spring, parallel = True, plot=True, return_vals=F
     # total number of decay days. low counts mean pixel rarely sees snow in the 20yr dataset
     if len(yv) < 150:
                                
-        print("less than 50 decay days identified")
+        print("less than 150 decay days identified")
         # return zeros for all vis model params if there are not enough points
         return np.array([0, 0, 0, 0, 0, 0, 0])
     
@@ -92,13 +92,14 @@ def decay_params(bb, time_dim, spring, parallel = True, plot=True, return_vals=F
                                     ydata=vis,
                                     maxfev=1000000,
                                     p0=[4300, 3600, 1.89],
-                                    bounds=((0, 0, 1), (1000000, 1000000, 4)))        
+                                    bounds=((0, 0, 1.5), (10000000, 10000000, 4)))        
                                             
 
         # print the parameters
         #vis_model
 
         if plot==True:
+            print("plotting not yet updated for pwr function!")
             # PLOT VISIBLE
             #x = sasp_processed['storm_hours'][:100000].values
             fig, ax = plt.subplots(figsize=(18,8))
@@ -130,17 +131,19 @@ def decay_params(bb, time_dim, spring, parallel = True, plot=True, return_vals=F
 
 
         ## IR curve fit
-        ir_model, cov = optimize.curve_fit(albedo_dev.albedo_ir,
+        ir_model, cov = optimize.curve_fit(albedo_dev.albedo_ir_pwr,
                                     xdata=xt, 
                                     ydata=ir, 
                                     maxfev=1000000,
-                                    p0=[-0.02123, 40, 1000],
-                                    bounds=((-np.inf, 0, 0), (100, 1000, 2000)))
+                                    p0=[100, 1000, 2],
+                                    bounds=((0, 0, 1.5), (100000, 100000, 4)))
         # print the parameters
         #ir_model
 
         if plot==True:
             #PLOT IR
+            print("plotting not yet updated for pwr function!")
+            
             #x = sasp_processed['storm_hours'][:100000].values
             fig, ax = plt.subplots(figsize=(18,8))
 
