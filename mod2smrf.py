@@ -28,9 +28,10 @@ import plotly.express as px
 
 def get_timestamp(f):
     """
-    get date from filename
-    will only parse date if contained within underscore
+    get date from filename. Returns both str and datetime format. 
+    Will only parse date if contained within underscore.
     e.x. _20221031_
+    
     :param f: path string
     :return: tuple of datetime date and string date
     """
@@ -39,7 +40,6 @@ def get_timestamp(f):
     str_fmt = split_str[idx.index(True)]
     dt_fmt = pd.to_datetime(str_fmt)
     
-    #nums = re.findall('\d+', f)
     return dt_fmt, str_fmt
 
 # deprecated
@@ -115,7 +115,8 @@ def spectral_albedo(gs_image):
 
 def s2m(smrf_albedo, mod_albedo, wavelength):
     """
-    loads existing albedo .nc file from AWSM run, and replaces albedo with satellite obsevations for the same time  period. 
+    loads existing albedo .nc file from AWSM run, and replaces albedo with satellite obsevations 
+    for the same time  period. 
     
     :param mod_albedo: dir of .nc of remote albedo observations
     :param smrf_albedo: location of template SMRF file to use for rio.reproject_match 
@@ -239,7 +240,7 @@ def process_modis_smrf(smrf_albedo, mod_albedo, basin_dir, wy, wavelength):
         # e.x. _20221031_
         dt, _ = get_timestamp(f)
         
-        print(dt)
+        #print(dt)
         
         # run for single water water year only
         if (dt >= datetime(wy, 4, 1)) & (dt <= datetime(wy, 9, 30)):
