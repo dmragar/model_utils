@@ -24,7 +24,9 @@ import os
 
 import plotly.express as px
 
-
+# processing to reformat and interpolate satellite images and save them in expected
+# and format for AWSM to load during execution. Includes defs for testing and
+# prototyping
 
 def get_timestamp(f):
     """
@@ -42,6 +44,7 @@ def get_timestamp(f):
     
     return dt_fmt, str_fmt
 
+
 # deprecated
 def lm(A, B, illum, gs_image):
     """
@@ -50,6 +53,7 @@ def lm(A, B, illum, gs_image):
     alb = 1 - (A * illum * (gs_image ** (B * illum)))
     
     return alb
+
 
 def broad2spectral(alb_bb):
     """
@@ -70,6 +74,7 @@ def broad2spectral(alb_bb):
     
     return alb_vis, alb_nir
     
+
 # deprecated
 def spectral_albedo(gs_image):
     """
@@ -109,8 +114,6 @@ def spectral_albedo(gs_image):
              gs_image)
     
     return vis, nir
-
-
 
 
 def s2m(smrf_albedo, mod_albedo, wavelength):
@@ -208,13 +211,9 @@ def s2m(smrf_albedo, mod_albedo, wavelength):
         "band_data": wavelength
         }
     )
-    
     # assign SMRF projection
     mod_a['projection'] = smrf_a['projection']
-    
     return(mod_a)
-
-
 
 
 def process_modis_smrf(smrf_albedo, mod_albedo, basin_dir, wy, wavelength):
@@ -224,41 +223,28 @@ def process_modis_smrf(smrf_albedo, mod_albedo, basin_dir, wy, wavelength):
     :param mod_albedo: dir of .nc of remote albedo observations
     :param smrf_albedo: location of template SMRF file to use for rio.reproject_match 
     :param wavelength: which band to process, "albedo_vis" or "albedo_ir"
+    :return: NetCDF of albedo for each wavelength range to output dir
     """
     # sort inplace
     mod_albedo.sort()
-    #smrf_albedo.sort()
-    
     smrf_albedo = xr.open_dataset(smrf_albedo)
-    # HACK to get wy2020. Needs fix
+    # hack to get wy2020. Needs fix
     #mod_albedo = mod_albedo[6940:]
     
-    
     for f in mod_albedo:
-        # get date from filename
-        # will only parse date if contained within underscore
-        # e.x. _20221031_
-        dt, _ = get_timestamp(f)
-        
-        #print(dt)
-        
+        dt, ts = get_timestamp(f)
         # run for single water water year only
         if (dt >= datetime(wy, 4, 1)) & (dt <= datetime(wy, 9, 30)):
-    
                 print(f'processing MODIS file: {f}')
-                #print(f'processing SMRF file: {b}')
                 print('-----------------------')
-                #run s2m 
+    
                 res = s2m(smrf_albedo, f, wavelength)
-                
                 # hour 15 is chosen for plot
                 #res[wavelength][15].plot()
                 #plt.show()
                 
-                _, ts = get_timestamp(f)
-                
+                #_, ts = get_timestamp(f)
                 outp = os.path.join(basin_dir, str('run' + ts), str(wavelength + '_modis.nc'))
-            
                 print(outp)
             
                 # delete existing. HDF5 issues when reading existing file.
@@ -270,7 +256,6 @@ def process_modis_smrf(smrf_albedo, mod_albedo, basin_dir, wy, wavelength):
                                   format='NETCDF4', 
                                   mode='w',
                                   engine='netcdf4')
-        
                 except: 
                     raise PermissionError(f'WARN: file not saved. check if smrf directory exists for day: {ts}')
                 
