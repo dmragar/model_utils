@@ -13,19 +13,25 @@ import datetime as dt
 import dask
 
 
+# these functions process local data from SBB to be used for comparisons. 
+# date logic is repeated in most cases so that file-specific changes
+# can be made quickily if necessary.
+
 def H24_to_datetime(date_str):
-    """changes odd 24-hr times used by CSAS to datetime object
+    """
+    formats 24-hr times used by CSAS to datetime object
     """
     if date_str[9:11] != '24':
         return pd.to_datetime(date_str, format='%Y %j %H%M')
-
+    
     date_str = date_str[0:9] + '00' + date_str[11:]
     return pd.to_datetime(date_str, format='%Y %j %H%M') + \
-           dt.timedelta(days=1)
+        dt.timedelta(days=1)
 
 
 def load_SBB_10year():
-    """load 10 year SBB dataset from shared_cryosphere and format datetime
+    """
+    load 10 year SBB dataset from shared_cryosphere and format datetime
     returns: df 
     """
     df = pd.read_csv('../shared_cryosphere/dragar/SBSP/SBSP_1hr_2010-2020.csv')
@@ -33,11 +39,12 @@ def load_SBB_10year():
     df['Hour'] = df['Hour'].astype(str).apply(lambda x: x.zfill(4))
     df['datetime']=df['Year'].astype(str)+" "+df['DOY']+" "+df['Hour'].astype(str)
     df.index=df['datetime'].apply(H24_to_datetime)
-    
     return df
 
+
 def load_SBB_03_09():
-    """load 10 year SBB dataset from shared_cryosphere and format datetime
+    """
+    load 10 year SBB dataset from shared_cryosphere and format datetime.
     returns: df 
     """
     df = pd.read_csv('../shared_cryosphere/dragar/SBSP/SBSP_1hr_2003-2009.csv')
@@ -45,22 +52,22 @@ def load_SBB_03_09():
     df['Hour'] = df['Hour'].astype(str).apply(lambda x: x.zfill(4))
     df['datetime']=df['Year'].astype(str)+" "+df['DOY']+" "+df['Hour'].astype(str)
     df.index=df['datetime'].apply(H24_to_datetime)
-    
     return df
 
 
 def load_SASP_10year():
-    """load 10 year SBB dataset from shared_cryosphere and format datetime
+    """
+    load 10 year SBB dataset from shared_cryosphere and format datetime
     returns: df 
     """
     df = pd.read_csv('../shared_cryosphere/dragar/SASP/SASP_1hr_2010-2020.csv')
-    # outrageous date handling 
+    # date handling 
     df['DOY'] = df['DOY'].astype(str).apply(lambda x: x.zfill(3))
     df['Hour'] = df['Hour'].astype(str).apply(lambda x: x.zfill(4))
     df['datetime']=df['Year'].astype(str)+" "+df['DOY']+" "+df['Hour'].astype(str)
     df.index=df['datetime'].apply(H24_to_datetime)
-    
     return df
+
 
 def load_SASP_wy2021(previous_df):
     """load wy2021 and rename headers to match the previous longer file
@@ -76,12 +83,11 @@ def load_SASP_wy2021(previous_df):
     res = {df.columns.values[i]: previous_df.columns.values[i] for i in range(len(df.columns.values))}
     df = df.rename(columns=res)
     
-    # same outrageous data handling as before
+    # same date handling as before
     df['DOY'] = df['DOY'].astype(str).apply(lambda x: x.zfill(3))
     df['Hour'] = df['Hour'].astype(str).apply(lambda x: x.zfill(4))
     df['datetime']=df['Year'].astype(str)+" "+df['DOY']+" "+df['Hour'].astype(str)
     df.index=df['datetime'].apply(H24_to_datetime)
-    
     return df
     
 
@@ -93,46 +99,33 @@ def load_SASP_03_09():
     df['DOY'] = df['DOY'].astype(str).apply(lambda x: x.zfill(3))
     df['Hour'] = df['Hour'].astype(str).apply(lambda x: x.zfill(4))
     df['datetime']=df['Year'].astype(str)+" "+df['DOY']+" "+df['Hour'].astype(str)
-    df.index=df['datetime'].apply(H24_to_datetime)
-    
+    df.index=df['datetime'].apply(H24_to_datetime) 
     return df
 
 
 def albedo_vis(df):
-    """process SBB 10 year dataset to visible albedo, *including removal of impossible values*
-    returns: df with 'albedo_vis' col added
+    """
+    process SBB 10 year dataset to visible albedo.
     """
     df['up_vis'] = df['PyUp_Unfilt_W'] - df['PyUp_Filt_W']
     df['down_vis'] = df['PyDwn_Unfilt_W'] - df['PyDwn_Filt_W']
     df['albedo_vis'] = df['down_vis'] / df['up_vis']
-    # masking
-    #df['albedo_vis'] = df['albedo_vis'].mask(df['albedo_vis'] > 1)
-    #df['albedo_vis'] = df['albedo_vis'].mask(df['albedo_vis'] < 0)
-    #df['albedo_vis'] = df['albedo_vis'].mask(df['PyUp_Unfilt_W'] < 5)
-    
     return df
 
+
 def albedo_broadband(df):
-    """process SBB 10 year dataset to visible albedo, *including removal of impossible values*
-    returns: df with 'albedo_broadband' col added
     """
-    #df['up_vis'] = df['PyUp_Unfilt_W'] - df['PyUp_Filt_W']
-    #df['down_vis'] = df['PyDwn_Unfilt_W'] - df['PyDwn_Filt_W']
-    df['albedo_broadband'] = df['PyDwn_Unfilt_W'] / df['PyUp_Unfilt_W']
-    #df['albedo_broadband'] = df['albedo_broadband'].mask(df['albedo_broadband'] > 1)
-    #df['albedo_broadband'] = df['albedo_broadband'].mask(df['PyUp_Unfilt_W'] < 20)
-    
+    process SBB 10 year dataset to visible albedo.
+    """
+    df['albedo_broadband'] = df['PyDwn_Unfilt_W'] / df['PyUp_Unfilt_W']    
     return df
 
 
 def albedo_ir(df):
-    """process SBB 10 year dataset to visible albedo, *including removal of impossible values*
-    returns: df with 'albedo_ir' col added
     """
-    #df['albedo_ir'] = df['albedo_broadband'] - df['albedo_vis']
-    
+    process SBB 10 year dataset to visible albedo.
+    """
     df['albedo_ir'] = df['PyDwn_Filt_W'] / df['PyUp_Filt_W']
-    
     return df
     
     

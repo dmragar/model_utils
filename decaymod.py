@@ -8,10 +8,8 @@ import datetime as dt
 import glob
 
 from scipy.signal import argrelextrema
-
 from lib import mod2smrf
 from lib import albedo_dev
-
 
 
 
@@ -28,10 +26,14 @@ def albedo_signal(df, n=4, plot=False):
     df.index = pd.to_datetime(df.index)
 
     # Find local peaks
-    df['min'] = df.iloc[argrelextrema(df.band_data.values, np.less_equal,
-                        order=n)[0]]['band_data']
-    df['max'] = df.iloc[argrelextrema(df.band_data.values, np.greater_equal,
-                        order=n)[0]]['band_data']
+    df['min'] = df.iloc[argrelextrema(
+        df.band_data.values, 
+        np.less_equal,
+        order=n)[0]]['band_data']
+    df['max'] = df.iloc[argrelextrema(
+        df.band_data.values, 
+        np.greater_equal,
+        order=n)[0]]['band_data']
 
     # Plot results
     if plot == True:
@@ -41,7 +43,6 @@ def albedo_signal(df, n=4, plot=False):
 
         fig = matplotlib.pyplot.gcf()
         fig.set_size_inches(18.5, 10)
-
         plt.show()
     
     # subset to remove zero values
@@ -58,7 +59,6 @@ def decay_series(df):
     x_time = [] #pd.Series(dtype='float')
     y_val = [] #pd.Series(dtype='float')
     
-    
     #subset to rows with a min OR max value, excluding all rows where both min and max are nan.
     idx_df = df[(df['min'].notna()) | (df['max'].notna())]
     #print(idx_df)
@@ -70,7 +70,6 @@ def decay_series(df):
     idx_df = idx_df[idx_df['max'].diff(-1).isna()]
     # same for min col
     idx_df = idx_df[idx_df['min'].diff(-1).isna()]
-    
     idx_df = idx_df.replace('nan', np.nan)
     
     #skip if there are no valid observations
@@ -96,7 +95,6 @@ def decay_series(df):
 
             x_time.extend(decay['count'].tolist())
             y_val.extend(decay['band_data'].tolist())
-
             plt.show()
         
     return x_time, y_val

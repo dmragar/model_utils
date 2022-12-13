@@ -41,31 +41,29 @@ def get_timestamp(f):
     idx = [char.isdigit() for char in split_str]
     str_fmt = split_str[idx.index(True)]
     dt_fmt = pd.to_datetime(str_fmt)
-    
     return dt_fmt, str_fmt
 
 
 # deprecated
 def lm(A, B, illum, gs_image):
     """
+    deprecated.
     from Painter 2009
     """
     alb = 1 - (A * illum * (gs_image ** (B * illum)))
-    
     return alb
 
 
 def broad2spectral(alb_bb):
     """
-    :returns: tuple: alb_v, alb_ir
+    Uses 700nm cutoff from vis to nir (to match SMRF) 
     
     from MS:
     NIRalb =0.1608exp(1.7661*BBalb)
     VISalb = (BBalb-0.4505*NIRalb)/0.5495
     
-    Uses 700nm cutoff from vis to nir (to match SMRF)
+    :returns: tuple: alb_v, alb_ir
     """
-    
     x = 1.7661 * alb_bb
     alb_nir = 0.1608 * np.exp(x)
     
@@ -78,41 +76,36 @@ def broad2spectral(alb_bb):
 # deprecated
 def spectral_albedo(gs_image):
     """
+    deprecated.
     solve for visible and IR albedo, using Painter 2009
-    
     """
     #30 degree illum angle
     #WARN: A & B coeffs covary with illum angle 
-    
     illum = 1 - np.cos(30)
     # VIS
     A_vis = 0.0040
     B_vis = 0.4730
     # NIR
-    #A_ir = 0.2725
-    #B_ir = 0.1791
-    
     A_ir = 0.2725
     B_ir = 0.1591
     # broad 30 deg
     A_br = 0.0765
     B_br = 0.2205
     
-    
     #subtract gs from drfs
     #gs_image += drfs_image
-    
-    
-    vis = lm(A_vis, 
-             B_vis, 
-             illum, 
-             gs_image)
-    
-    nir = lm(A_ir, 
-             B_ir, 
-             illum, 
-             gs_image)
-    
+    vis = lm(
+        A_vis, 
+        B_vis, 
+        illum, 
+        gs_image
+    )
+    nir = lm(
+        A_ir, 
+        B_ir, 
+        illum, 
+        gs_image
+    )
     return vis, nir
 
 
@@ -136,7 +129,6 @@ def s2m(smrf_albedo, mod_albedo, wavelength):
     #smrf_a['x'] = smrf_a['x'].round().astype(int)
     #smrf_a['y'] = smrf_a['y'].round().astype(int)
     smrf_a.rio.set_crs('EPSG:32613', inplace=True)
-    #strip albedo_vis 
     
     # extract datetime from path
     _, ts = get_timestamp(mod_albedo)
@@ -182,9 +174,6 @@ def s2m(smrf_albedo, mod_albedo, wavelength):
     mod_a = mod_a.squeeze('band')
 
     mod_a['band_data'] = mod_a['band_data'].rio.write_nodata(np.nan)  
-    
-    #mod_a = mod_a.rio.interpolate_na(method="linear")
-    #mod_a = mod_a.rio.interpolate_na(method="nearest")
     mod_a['band_data'] = mod_a['band_data'].fillna(0.35)
     
     #mod_a['band_data'] = mod_a['band_data'].interp(method="linear")
@@ -228,7 +217,7 @@ def process_modis_smrf(smrf_albedo, mod_albedo, basin_dir, wy, wavelength):
     # sort inplace
     mod_albedo.sort()
     smrf_albedo = xr.open_dataset(smrf_albedo)
-    # hack to get wy2020. Needs fix
+    # hack to get wy2020. 
     #mod_albedo = mod_albedo[6940:]
     
     for f in mod_albedo:
@@ -252,10 +241,12 @@ def process_modis_smrf(smrf_albedo, mod_albedo, basin_dir, wy, wavelength):
                       os.remove(outp)
     
                 try:
-                    res.to_netcdf(path=outp, 
-                                  format='NETCDF4', 
-                                  mode='w',
-                                  engine='netcdf4')
+                    res.to_netcdf(
+                        path=outp, 
+                        format='NETCDF4', 
+                        mode='w',
+                        engine='netcdf4'
+                    )
                 except: 
                     raise PermissionError(f'WARN: file not saved. check if smrf directory exists for day: {ts}')
                 

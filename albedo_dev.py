@@ -15,7 +15,13 @@ IRZ0 = 0.1              # ir zenith increase range, gsize=0
 BOIL = 373.15           # boiling temperature K
 GRAVITY = 9.80665       # gravity (m/s^2)
 
+"""
+a scratch file to play with methods from the SMRF.envphys.albedo module. 
 
+note: in most cases the solar illumination angle adjustment is turned
+off in order to simplify the methods for use outside SMRF, i.e. running 
+calibrations with station data.
+"""
 
 #growth params
 #a = 4.0
@@ -151,20 +157,9 @@ def albedo_vis(telapsed, gsize, maxgsz, VFAC):
 
     
     # do not change, or distributed params will be biased 
-    # by dirt multiplier!!
     # v1 is 10
     dirt = 1.5
     
-    # check inputs
-    #if gsize <= 0 or gsize > 500:
-    #    raise Exception("unrealistic input: gsize=%i", gsize)
-
-    #if (maxgsz <= gsize or maxgsz > 2000):
-    #    raise Exception("unrealistic input: maxgsz=%i", maxgsz)
-
-    #if 1 >= dirt >= 10:
-    #    raise Exception("unrealistic input: dirt=%i", dirt)
-
     # set initial grain radii for vis and ir
     #radius_ir = math.sqrt(gsize)
     #range_ir = math.sqrt(maxgsz) - radius_ir
