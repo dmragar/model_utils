@@ -83,8 +83,6 @@ def decay_series(df):
     
         # iterate max min pairs and add each decay event to list
         for n in np.arange(len(idx_df)-1, step=2):
-            #print(n)
-            #print(n+1)
             #df[idx_df.index[n]:idx_df.index[n+1]].plot()
             decay = df[idx_df.index[n]:idx_df.index[n+1]].copy()
             decay['count'] = range(len(decay))
